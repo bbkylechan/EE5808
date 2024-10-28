@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Three.js Blue Car on Infinite Road</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, car, road, sky;
+        let speed = 0.1; // Car speed
+
+        init();
+        animate();
+
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(0, 3, 6); // Camera starts behind the car
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true; // Enable shadows
+            document.body.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xcccccc, 0.4); // Soft ambient light
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 0); // Initial light position
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Sky (morning blue sky)
+            const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+            const skyMaterial = new THREE.MeshBasicMaterial({
+                color: 0x87CEEB, // Light blue sky for morning
+                side: THREE.BackSide,
+            });
+            sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+
+            // Road (infinite loop)
+            const roadGeometry = new THREE.PlaneGeometry(100, 1000);
+            const roadTexture = new THREE.TextureLoader().load('https://cdn.jsdelivr.net/gh/devReemoNg/EE5808-models/static/rock.png'); // Sample road texture
+            roadTexture.wrapT = THREE.RepeatWrapping;
+            roadTexture.repeat.y = 50;
+            const roadMaterial = new THREE.MeshPhongMaterial({
+                map: roadTexture,
+            });
+            road = new THREE.Mesh(roadGeometry, roadMaterial);
+            road.rotation.x = -Math.PI / 2;
+            road.position.y = 0;
+            road.receiveShadow = true;
+            scene.add(road);
+
+            // Car (simple box for body)
+            const carBodyGeometry = new THREE.BoxGeometry(1.5, 0.75, 3);
+            const carBodyMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff });
+            car = new THREE.Mesh(carBodyGeometry, carBodyMaterial);
+            car.castShadow = true;
+            car.position.y = 0.4; // Car above ground
+            scene.add(car);
+
+            // Car wheels (simple cylinders)
+            const wheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+
+            // Create wheels and add to the car
+            const frontLeftWheel = createWheel(wheelGeometry, wheelMaterial, -0.75, -0.2, 1.2);
+            const frontRightWheel = createWheel(wheelGeometry, wheelMaterial, 0.75, -0.2, 1.2);
+            const rearLeftWheel = createWheel(wheelGeometry, wheelMaterial, -0.75, -0.2, -1.2);
+            const rearRightWheel = createWheel(wheelGeometry, wheelMaterial, 0.75, -0.2, -1.2);
+
+            car.add(frontLeftWheel, frontRightWheel, rearLeftWheel, rearRightWheel);
+
+            // Resize handling
+            window.addEventListener("resize", onWindowResize);
+        }
+
+        // Function to create car wheels
+        function createWheel(geometry, material, x, y, z) {
+            const wheel = new THREE.Mesh(geometry, material);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(x, y, z);
+            wheel.castShadow = true;
+            return wheel;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move the car forward along the road
+            car.position.z -= speed;
+
+            // Reset car position to simulate an infinite road
+            if (car.position.z < -50) {
+                car.position.z = 0;
+            }
+
+            // Make camera follow the car
+            camera.position.z = car.position.z + 6; // Keep the camera behind the car
+            camera.lookAt(car.position);
+
+            // Make the directional light follow the car
+            scene.children.forEach((object) => {
+                if (object instanceof THREE.DirectionalLight) {
+                    object.position.set(car.position.x + 5, car.position.y + 10, car.position.z);
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        // Handle window resizing
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+
+</html>
